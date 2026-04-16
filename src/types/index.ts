@@ -1,4 +1,3 @@
-// ギミック種類
 export type GimmickType =
   | 'aoe_circle'
   | 'aoe_line'
@@ -10,44 +9,69 @@ export type GimmickType =
   | 'pull'
   | 'tower';
 
-// ターゲット種類
 export type TargetType = 'fixed' | 'player' | 'random_ai';
 
-// 個々のギミックイベント
 export interface GimmickEvent {
   id: string;
   type: GimmickType;
-  time: number;           // 発火タイミング（秒）
-  warningDuration: number; // 警告フェーズの長さ（秒）
+  time: number;
+  warningDuration: number;
   target: TargetType;
-  x?: number;             // 固定位置X（アリーナ座標）
-  y?: number;             // 固定位置Y
+  label?: string;
+
+  // 位置（aoe_circle / aoe_line / aoe_fan / aoe_donut / knockback / pull / tower）
+  x?: number;
+  y?: number;
+
   // 円形AoE
   radius?: number;
+
   // 直線AoE
   width?: number;
-  angle?: number;
   length?: number;
+  angle?: number; // ラジアン
+
   // 扇形AoE
-  fanAngle?: number;
+  fanAngle?: number; // ラジアン（扇の角度幅）
+
   // ドーナツAoE
   innerRadius?: number;
   outerRadius?: number;
-  // 頭割り
+
+  // 頭割り（Stack）
   requiredCount?: number;
-  // 吹き飛ばし
-  knockbackDistance?: number;
-  knockbackAngle?: number;
+  stackRadius?: number;
+
+  // 散開（Spread）
+  minDistance?: number;
+  spreadRadius?: number; // 散開マーカーの表示半径
+
+  // 吹き飛ばし・引き寄せ
+  knockbackDistance?: number; // 正=吹き飛ばし、負=引き寄せ
+  knockbackRadius?: number;   // この半径内のキャラが対象（デフォルト全体）
+
+  // 塔踏み（Tower）
+  towerRequiredCount?: number;
+
+  // AIの目標座標（このギミックが発火する前にAIが移動する先）
+  aiPositions?: { memberId: string; x: number; y: number }[];
 }
 
-// AIパーティメンバー設定
 export interface AIMember {
   id: string;
-  label: string;          // 表示ラベル（T1, H1など）
+  label: string;
+  color: number; // Phaser color (0xRRGGBB)
   defaultPosition: { x: number; y: number };
 }
 
-// ステージ全体データ
+export interface AIMemberState {
+  id: string;
+  label: string;
+  color: number;
+  x: number;
+  y: number;
+}
+
 export interface StageData {
   meta: {
     title: string;
@@ -62,18 +86,34 @@ export interface StageData {
   timeline: GimmickEvent[];
 }
 
-// フレームごとの記録（リプレイ用）
 export interface ReplayFrame {
   time: number;
   playerX: number;
   playerY: number;
 }
 
-// 失敗ログ
 export interface FailureLog {
   time: number;
   gimmickId: string;
   gimmickType: GimmickType;
   playerX: number;
   playerY: number;
+}
+
+// GimmickManager が返すエフェクト
+export type GimmickEffect =
+  | { kind: 'hit';          gimmickId: string; gimmickType: GimmickType }
+  | { kind: 'knockback';    dx: number; dy: number }
+  | { kind: 'stack_fail';   gimmickId: string }
+  | { kind: 'tower_fail';   gimmickId: string }
+  | { kind: 'spread_fail';  gimmickId: string };
+
+// 各ギミッククラスが受け取るコンテキスト
+export interface GimmickContext {
+  elapsed: number;
+  playerX: number;
+  playerY: number;
+  arenaWidth: number;
+  arenaHeight: number;
+  aiMembers: AIMemberState[];
 }

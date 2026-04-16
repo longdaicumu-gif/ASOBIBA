@@ -1,6 +1,6 @@
 import * as Phaser from 'phaser';
 import type { StageData, ReplayFrame, FailureLog } from '../../types';
-import { AoeCircle } from '../gimmicks/AoeCircle';
+import { eventBus } from '../eventBus';
 
 export class ReplayScene extends Phaser.Scene {
   private frames: ReplayFrame[] = [];
@@ -18,7 +18,6 @@ export class ReplayScene extends Phaser.Scene {
 
   private playerDot!: Phaser.GameObjects.Arc;
   private trailGraphics!: Phaser.GameObjects.Graphics;
-  private aoeCircles: AoeCircle[] = [];
   private statusText!: Phaser.GameObjects.Text;
   private timeBar!: Phaser.GameObjects.Graphics;
 
@@ -35,53 +34,41 @@ export class ReplayScene extends Phaser.Scene {
   }
 
   create() {
-    const { width: screenW, height: screenH } = this.scale;
+    const { width: W, height: H } = this.scale;
 
     this.arenaWidth = this.stageData.arena.width;
     this.arenaHeight = this.stageData.arena.height;
-    this.arenaOffsetX = (screenW - this.arenaWidth) / 2;
-    this.arenaOffsetY = (screenH - this.arenaHeight) / 2 - 20;
-
+    this.arenaOffsetX = (W - this.arenaWidth) / 2;
+    this.arenaOffsetY = (H - this.arenaHeight) / 2 - 20;
     this.totalTime = this.frames.length > 0 ? this.frames[this.frames.length - 1].time : 0;
 
     this.cameras.main.setBackgroundColor('#0d0d1a');
-
     this.drawArena();
 
     this.trailGraphics = this.add.graphics();
-
-    // プレイヤードット
     this.playerDot = this.add.circle(0, 0, 12, 0x00ccff).setVisible(false);
 
-    // AoEギミック再現
-    for (const event of this.stageData.timeline) {
-      if (event.type === 'aoe_circle') {
-        this.aoeCircles.push(new AoeCircle(this, event, this.arenaOffsetX, this.arenaOffsetY));
-      }
-    }
-
-    // 失敗ログ表示
     this.drawFailureMarkers();
 
-    // UIテキスト
-    this.statusText = this.add.text(screenW / 2, 20, 'リプレイ中...', {
-      fontSize: '18px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 3,
-    }).setOrigin(0.5);
+    const hasFail = this.failures.length > 0;
+    this.statusText = this.add.text(W / 2, 20,
+      hasFail ? 'リプレイ - 失敗箇所を確認しよう' : 'リプレイ - クリアおめでとう！', {
+        fontSize: '16px',
+        color: hasFail ? '#ff8888' : '#88ffaa',
+        stroke: '#000', strokeThickness: 3,
+      }).setOrigin(0.5);
 
-    // タイムバー背景
-    this.add.rectangle(screenW / 2, screenH - 20, screenW - 40, 10, 0x333333).setOrigin(0.5);
+    this.add.rectangle(W / 2, H - 20, W - 40, 8, 0x333355).setOrigin(0.5);
     this.timeBar = this.add.graphics();
 
-    // Rキーで再スタート、Eキーでエディター（将来）
-    this.input.keyboard?.addKey('R').on('down', () => this.restartStage());
-
-    this.add.text(screenW / 2, screenH - 45, '[R] もう一度プレイ', {
-      fontSize: '14px',
-      color: '#888888',
+    this.add.text(W / 2, H - 44, '[R] もう一度プレイ   [ESC] タイトルへ', {
+      fontSize: '13px', color: '#666688',
     }).setOrigin(0.5);
+
+    this.input.keyboard?.addKey('R').on('down', () =>
+      this.scene.start('GameScene', { stageData: this.stageData })
+    );
+    this.input.keyboard?.addKey('ESC').on('down', () => this.exitToTitle());
   }
 
   update(_time: number, delta: number) {
@@ -90,63 +77,41 @@ export class ReplayScene extends Phaser.Scene {
     this.replayTime += delta / 1000;
     if (this.replayTime > this.totalTime + 1) {
       this.isPlaying = false;
-      this.statusText.setText('リプレイ終了 — [R] でもう一度');
+      this.statusText.setText('[R] でもう一度 / [ESC] タイトルへ');
       return;
     }
 
-    // プレイヤー位置補間
     const pos = this.getFrameAt(this.replayTime);
     if (pos) {
-      const sx = this.arenaOffsetX + pos.x;
-      const sy = this.arenaOffsetY + pos.y;
-      this.playerDot.setPosition(sx, sy).setVisible(true);
+      this.playerDot
+        .setPosition(this.arenaOffsetX + pos.x, this.arenaOffsetY + pos.y)
+        .setVisible(true);
     }
 
-    // 軌跡描画
     this.drawTrail();
 
-    // ギミック再生
-    for (const aoe of this.aoeCircles) {
-      if (aoe.state !== 'done') {
-        aoe.update(this.replayTime, pos?.x ?? 0, pos?.y ?? 0);
-        if (aoe.state === 'active' && this.replayTime > aoe.event.time + 0.1) {
-          aoe.markDone();
-        }
-      }
-    }
-
-    // タイムバー
-    const { width: screenW, height: screenH } = this.scale;
-    const progress = Math.min(this.replayTime / this.totalTime, 1);
+    const { width: W, height: H } = this.scale;
+    const progress = this.totalTime > 0 ? Math.min(this.replayTime / this.totalTime, 1) : 0;
     this.timeBar.clear();
     this.timeBar.fillStyle(0x00ccff, 1);
-    this.timeBar.fillRect(20, screenH - 25, (screenW - 40) * progress, 10);
+    this.timeBar.fillRect(20, H - 24, (W - 40) * progress, 8);
 
-    // 失敗時刻のステータス
-    const currentFailure = this.failures.find(
-      f => Math.abs(f.time - this.replayTime) < 0.2
-    );
-    if (currentFailure) {
-      this.statusText.setText(`被弾: ${currentFailure.gimmickType}`).setColor('#ff4444');
-    }
+    const cur = this.failures.find(f => Math.abs(f.time - this.replayTime) < 0.15);
+    if (cur) this.statusText.setText(`被弾: ${cur.gimmickType}`).setColor('#ff4444');
   }
 
   private drawTrail() {
     this.trailGraphics.clear();
-    const maxTrailTime = 1.5;
-    const trailFrames = this.frames.filter(
-      f => f.time >= this.replayTime - maxTrailTime && f.time <= this.replayTime
+    const win = 1.5;
+    const trail = this.frames.filter(
+      f => f.time >= this.replayTime - win && f.time <= this.replayTime
     );
-    if (trailFrames.length < 2) return;
-
-    for (let i = 1; i < trailFrames.length; i++) {
-      const alpha = (i / trailFrames.length) * 0.6;
-      this.trailGraphics.lineStyle(3, 0x00ccff, alpha);
+    if (trail.length < 2) return;
+    for (let i = 1; i < trail.length; i++) {
+      this.trailGraphics.lineStyle(3, 0x00ccff, (i / trail.length) * 0.55);
       this.trailGraphics.lineBetween(
-        this.arenaOffsetX + trailFrames[i - 1].playerX,
-        this.arenaOffsetY + trailFrames[i - 1].playerY,
-        this.arenaOffsetX + trailFrames[i].playerX,
-        this.arenaOffsetY + trailFrames[i].playerY
+        this.arenaOffsetX + trail[i - 1].playerX, this.arenaOffsetY + trail[i - 1].playerY,
+        this.arenaOffsetX + trail[i].playerX, this.arenaOffsetY + trail[i].playerY
       );
     }
   }
@@ -155,17 +120,12 @@ export class ReplayScene extends Phaser.Scene {
     for (const fail of this.failures) {
       const sx = this.arenaOffsetX + fail.playerX;
       const sy = this.arenaOffsetY + fail.playerY;
-      // ✕マーク
       const g = this.add.graphics();
       g.lineStyle(3, 0xff2200, 1);
       g.lineBetween(sx - 10, sy - 10, sx + 10, sy + 10);
       g.lineBetween(sx + 10, sy - 10, sx - 10, sy + 10);
-
-      this.add.text(sx, sy - 20, `被弾: ${fail.gimmickType}`, {
-        fontSize: '11px',
-        color: '#ff4444',
-        stroke: '#000000',
-        strokeThickness: 2,
+      this.add.text(sx, sy - 22, `✗ ${fail.gimmickType}`, {
+        fontSize: '11px', color: '#ff5544', stroke: '#000', strokeThickness: 2,
       }).setOrigin(0.5);
     }
   }
@@ -178,8 +138,7 @@ export class ReplayScene extends Phaser.Scene {
       const last = this.frames[this.frames.length - 1];
       return { x: last.playerX, y: last.playerY };
     }
-    const a = this.frames[idx - 1];
-    const b = this.frames[idx];
+    const a = this.frames[idx - 1], b = this.frames[idx];
     const t = (time - a.time) / (b.time - a.time);
     return {
       x: a.playerX + (b.playerX - a.playerX) * t,
@@ -187,8 +146,8 @@ export class ReplayScene extends Phaser.Scene {
     };
   }
 
-  private restartStage() {
-    this.scene.start('GameScene', { stageData: this.stageData });
+  private exitToTitle() {
+    eventBus.emit('game:exit');
   }
 
   private drawArena() {
@@ -197,14 +156,10 @@ export class ReplayScene extends Phaser.Scene {
     g.fillRect(this.arenaOffsetX, this.arenaOffsetY, this.arenaWidth, this.arenaHeight);
     g.lineStyle(4, 0x4488cc, 1);
     g.strokeRect(this.arenaOffsetX - 2, this.arenaOffsetY - 2, this.arenaWidth + 4, this.arenaHeight + 4);
-    // グリッド
-    g.lineStyle(1, 0x2a4a6a, 0.4);
-    const step = 80;
-    for (let x = step; x < this.arenaWidth; x += step) {
+    g.lineStyle(1, 0x2a4a6a, 0.35);
+    for (let x = 80; x < this.arenaWidth; x += 80)
       g.lineBetween(this.arenaOffsetX + x, this.arenaOffsetY, this.arenaOffsetX + x, this.arenaOffsetY + this.arenaHeight);
-    }
-    for (let y = step; y < this.arenaHeight; y += step) {
+    for (let y = 80; y < this.arenaHeight; y += 80)
       g.lineBetween(this.arenaOffsetX, this.arenaOffsetY + y, this.arenaOffsetX + this.arenaWidth, this.arenaOffsetY + y);
-    }
   }
 }
