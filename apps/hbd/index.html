@@ -1,0 +1,586 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>ハピバメーカー — うごく誕生日カードGIF</title>
+<meta name="description" content="名前とメッセージを入れるだけ。3タップで“うごく”誕生日カードGIFが作れる。LINEでそのまま送れる。" />
+
+<!-- ▼▼▼ 設定ここだけ（Gumroadで100円商品を作ったら埋める） ▼▼▼
+     1. Gumroad で商品を作成（価格 100円 / 「Generate license keys」をON）
+     2. 商品のURL末尾（permalink）を GUMROAD.permalink に入れる  例) gumroad.com/l/hbdmaker → 'hbdmaker'
+     3. 購入ページURLを GUMROAD.productUrl に入れる
+     未設定でも動きます（購入ボタンが「準備中」になるだけ）。
+ ▲▲▲ ここだけ書き換えればOK ▲▲▲ -->
+<script>
+  window.GUMROAD = {
+    permalink: '',      // 例: 'hbdmaker'
+    productUrl: ''      // 例: 'https://gumroad.com/l/hbdmaker'
+  };
+</script>
+
+<!-- GIF書き出しライブラリ（ブラウザ内で完結・サーバー不要） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.js"></script>
+
+<style>
+  :root{
+    --bg:#fff5f7; --card:#ffffff; --ink:#2b2333; --sub:#8a8194;
+    --line:#f0e6ec; --accent:#ff4d6d; --accent2:#ffb703; --ok:#2fbf71;
+    --shadow:0 10px 30px rgba(120,70,110,.12);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Noto Sans JP","Segoe UI",sans-serif;
+    color:var(--ink); background:linear-gradient(180deg,#fff5f7,#f4f1ff);
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:520px; margin:0 auto; padding:16px 16px 40px;}
+  header.hero{text-align:center; padding:14px 6px 6px;}
+  header.hero .logo{font-size:30px; font-weight:800; letter-spacing:.5px;}
+  header.hero .logo b{color:var(--accent)}
+  header.hero .tag{color:var(--sub); font-size:13px; margin-top:4px;}
+
+  .card{background:var(--card); border:1px solid var(--line); border-radius:18px; box-shadow:var(--shadow); padding:14px; margin-top:14px;}
+
+  .preview-wrap{position:relative; border-radius:16px; overflow:hidden; background:#111; aspect-ratio:1/1;}
+  #preview{width:100%; height:100%; display:block;}
+
+  .chips{display:flex; gap:8px; margin-top:12px; flex-wrap:wrap;}
+  .chip{flex:1 1 0; min-width:120px; border:1.5px solid var(--line); background:#fff; color:var(--ink);
+        padding:10px 12px; border-radius:12px; font-size:14px; font-weight:600; cursor:pointer; transition:.15s;}
+  .chip.active{border-color:var(--accent); background:#fff0f3; color:var(--accent);}
+
+  label.fld{display:block; margin-top:12px;}
+  label.fld .lb{font-size:12px; color:var(--sub); font-weight:700; margin-bottom:5px; display:block;}
+  input[type=text], textarea{
+    width:100%; border:1.5px solid var(--line); border-radius:12px; padding:11px 12px;
+    font-size:16px; font-family:inherit; color:var(--ink); background:#fff; resize:vertical;
+  }
+  input:focus, textarea:focus{outline:none; border-color:var(--accent);}
+  textarea{min-height:64px; line-height:1.5;}
+
+  .chat{margin-top:6px;}
+  .chatlog{max-height:190px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding:4px 2px;}
+  .msg{max-width:85%; padding:9px 12px; border-radius:14px; font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word;}
+  .msg.bot{align-self:flex-start; background:#f4eef8; color:#4a3b57; border-bottom-left-radius:4px;}
+  .msg.me{align-self:flex-end; background:var(--accent); color:#fff; border-bottom-right-radius:4px;}
+  .chatform{display:flex; gap:8px; margin-top:10px;}
+  .chatform input{flex:1;}
+  .send{border:none; background:var(--accent); color:#fff; font-weight:800; padding:0 16px; border-radius:12px; font-size:15px; cursor:pointer;}
+  .hintrow{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;}
+  .hint{font-size:12px; color:var(--accent); background:#fff0f3; border:1px solid #ffd9e1; border-radius:999px; padding:5px 10px; cursor:pointer;}
+
+  .actions{display:flex; flex-direction:column; gap:10px; margin-top:6px;}
+  .btn{border:none; border-radius:14px; padding:15px; font-size:16px; font-weight:800; cursor:pointer; transition:.15s;}
+  .btn:disabled{opacity:.6; cursor:default;}
+  .btn.primary{background:linear-gradient(135deg,#ff6b8b,#ff4d6d); color:#fff; box-shadow:0 8px 20px rgba(255,77,109,.35);}
+  .btn.ghost{background:#fff; color:var(--ink); border:1.5px solid var(--line);}
+  .btn.gold{background:linear-gradient(135deg,#ffd23f,#ff9f1c); color:#4a3300;}
+
+  .paybox{margin-top:12px; padding:14px; border-radius:16px; background:linear-gradient(135deg,#fff9ec,#fff0f3); border:1px solid #ffe6b3;}
+  .paybox .h{font-weight:800; font-size:15px;}
+  .paybox .p{font-size:13px; color:#7a6a4a; margin:6px 0 10px;}
+  .paybox.unlocked{background:#eefaf1; border-color:#bfe9cd;}
+  .keyrow{display:flex; gap:8px; margin-top:10px;}
+  .keyrow input{flex:1;}
+  .unlockbtn{border:none; background:#2fbf71; color:#fff; font-weight:800; padding:0 14px; border-radius:12px; cursor:pointer;}
+
+  .result{margin-top:12px; text-align:center; display:none;}
+  .result img{max-width:100%; border-radius:14px; box-shadow:var(--shadow);}
+  .result .save-note{font-size:12px; color:var(--sub); margin-top:8px;}
+
+  .footer{ text-align:center; color:var(--sub); font-size:12px; margin-top:22px; line-height:1.7;}
+  .badge{display:inline-block; font-size:11px; background:#eee9f3; color:#6b5b7b; border-radius:999px; padding:3px 9px; margin-left:6px;}
+  .spin{display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.5); border-top-color:#fff; border-radius:50%; animation:sp .8s linear infinite; vertical-align:-2px; margin-right:6px;}
+  @keyframes sp{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <div class="logo">🎂 ハピバ<b>メーカー</b></div>
+    <div class="tag">うごく誕生日カードを3タップで。LINEでそのまま送れる。</div>
+  </header>
+
+  <!-- プレビュー -->
+  <div class="card">
+    <div class="preview-wrap">
+      <canvas id="preview" width="512" height="512"></canvas>
+    </div>
+
+    <div class="chips" id="templateChips">
+      <button class="chip active" data-template="confetti">🎉 紙吹雪</button>
+      <button class="chip" data-template="balloons">🎈 風船</button>
+    </div>
+
+    <label class="fld">
+      <span class="lb">相手の名前</span>
+      <input id="nameInput" type="text" maxlength="18" placeholder="ゆうき" value="ゆうき" />
+    </label>
+    <label class="fld">
+      <span class="lb">メッセージ</span>
+      <textarea id="msgInput" maxlength="80" placeholder="お誕生日おめでとう！">お誕生日おめでとう！
+すてきな1年になりますように🎂</textarea>
+    </label>
+  </div>
+
+  <!-- チャット編集（AI不使用・ルールベース） -->
+  <div class="card chat">
+    <div style="font-weight:800; font-size:14px; margin-bottom:8px;">チャットで編集 <span class="badge">AIなし・無料</span></div>
+    <div class="chatlog" id="chatlog"></div>
+    <div class="hintrow" id="hints">
+      <span class="hint">文字を赤くして</span>
+      <span class="hint">背景を夜空に</span>
+      <span class="hint">名前を大きく</span>
+      <span class="hint">もっと派手に</span>
+      <span class="hint">風船にして</span>
+    </div>
+    <form class="chatform" id="chatform" autocomplete="off">
+      <input id="chatInput" type="text" placeholder="例: 文字をピンクにして" />
+      <button class="send" type="submit">送信</button>
+    </form>
+  </div>
+
+  <!-- 書き出し -->
+  <div class="card">
+    <div class="actions">
+      <button class="btn primary" id="dlBtn">🎁 GIFを作る（無料・透かしあり）</button>
+    </div>
+
+    <!-- 課金導線 -->
+    <div class="paybox" id="paybox">
+      <div class="h">✨ 透かしを消して高画質に（100円・買い切り）</div>
+      <div class="p">送り物だから、透かしなしのキレイなGIFで。一度買えばずっと使えます。</div>
+      <button class="btn gold" id="buyBtn">100円で透かしを消す</button>
+      <div class="keyrow">
+        <input id="keyInput" type="text" placeholder="購入後のライセンスキーを貼り付け" />
+        <button class="unlockbtn" id="unlockBtn">解除</button>
+      </div>
+    </div>
+
+    <!-- 結果 -->
+    <div class="result" id="result">
+      <img id="resultImg" alt="できあがった誕生日GIF" />
+      <div class="actions" style="margin-top:10px;">
+        <button class="btn primary" id="shareBtn" style="display:none;">📲 このGIFを送る / 共有</button>
+        <a class="btn ghost" id="saveLink" download="birthday-card.gif" style="text-decoration:none; display:block; text-align:center;">⬇️ 保存する</a>
+      </div>
+      <div class="save-note">保存できない時は、上のGIFを長押し → 「画像を保存」</div>
+    </div>
+  </div>
+
+  <div class="footer">
+    作った人にコーヒーを☕ じゃなく、送る人にステキな1枚を。<br/>
+    ハピバメーカー <span id="verState"></span>
+  </div>
+
+</div>
+
+<script>
+/* =========================================================
+   ハピバメーカー — うごく誕生日カードGIF
+   すべてブラウザ内で完結（サーバー不要 / GitHub Pagesで公開可）
+   ========================================================= */
+
+// ---- 状態 ----
+const DEFAULTS = {
+  template: 'confetti',
+  textColor: '#ffffff',
+  accent: '#ff5d8f',
+  bgTheme: 'pink',
+  speed: 1,
+  density: 1,
+  nameScale: 1,
+};
+const state = Object.assign({}, DEFAULTS, { premium: false });
+
+// ---- 見た目のプリセット ----
+const COLORS = {
+  '赤':'#ff4d6d','ピンク':'#ff5d8f','桃':'#ff5d8f','青':'#4d94ff','水色':'#5ec7ff','空色':'#5ec7ff',
+  '緑':'#43c59e','黄':'#ffd23f','黄色':'#ffd23f','金':'#f2c14e','ゴールド':'#f2c14e',
+  '白':'#ffffff','黒':'#2b2333','紫':'#a06bff','オレンジ':'#ff924c','橙':'#ff924c',
+};
+const BG_THEMES = {
+  'pink':  ['#ff9a9e','#fecfef'],
+  'blue':  ['#4facfe','#00f2fe'],
+  'night': ['#0f2027','#2c5364'],
+  'gold':  ['#f6d365','#fda085'],
+  'mint':  ['#a1ffce','#d9fff0'],
+  'purple':['#a18cd1','#fbc2eb'],
+};
+const BG_WORDS = {
+  '夜':'night','夜空':'night','暗':'night','ナイト':'night',
+  '青':'blue','ブルー':'blue','水色':'blue','空':'blue',
+  '金':'gold','ゴールド':'gold','オレンジ':'gold','夕':'gold',
+  '緑':'mint','ミント':'mint',
+  '紫':'purple','パープル':'purple',
+  'ピンク':'pink','桃':'pink',
+};
+
+// ---- 要素 ----
+const preview = document.getElementById('preview');
+const pctx = preview.getContext('2d');
+const nameInput = document.getElementById('nameInput');
+const msgInput = document.getElementById('msgInput');
+
+// ---- 粒子（決定論的：GIFがキレイにループする） ----
+let particles = [];
+function rng(seed){ return function(){ seed = (seed*1103515245+12345) & 0x7fffffff; return seed/0x7fffffff; }; }
+const CONFETTI_COLORS = ['#ff4d6d','#ffd23f','#4d94ff','#43c59e','#a06bff','#ff924c','#ffffff'];
+const BALLOON_COLORS  = ['#ff6b8b','#ffd23f','#5ec7ff','#a06bff','#43c59e','#ff924c'];
+function buildParticles(){
+  const rand = rng(12345);
+  const base = state.template === 'balloons' ? 11 : 46;
+  const n = Math.max(4, Math.round(base * state.density));
+  const palette = state.template === 'balloons' ? BALLOON_COLORS : CONFETTI_COLORS;
+  particles = [];
+  for(let i=0;i<n;i++){
+    particles.push({
+      x: rand(),
+      size: 0.5 + rand()*0.8,
+      color: palette[Math.floor(rand()*palette.length)],
+      phase: rand(),
+      sway: 0.01 + rand()*0.05,
+      spin: rand()<0.5 ? 1 : -1,
+    });
+  }
+}
+buildParticles();
+
+// ---- 描画（プレビューも書き出しも共用 / 座標はsize基準の比率） ----
+function roundRect(ctx,x,y,w,h,r){ ctx.beginPath(); ctx.moveTo(x+r,y); ctx.arcTo(x+w,y,x+w,y+h,r); ctx.arcTo(x+w,y+h,x,y+h,r); ctx.arcTo(x,y+h,x,y,r); ctx.arcTo(x,y,x+w,y,r); ctx.closePath(); }
+
+function wrapLines(ctx, text, maxW){
+  const out = [];
+  (text||'').split('\n').forEach(para=>{
+    if(para === ''){ out.push(''); return; }
+    let line = '';
+    for(const ch of para){
+      if(ctx.measureText(line+ch).width > maxW && line){ out.push(line); line = ch; }
+      else line += ch;
+    }
+    if(line) out.push(line);
+  });
+  return out;
+}
+
+function drawFrame(ctx, t, size){
+  // 背景
+  const [c1,c2] = BG_THEMES[state.bgTheme] || BG_THEMES.pink;
+  const g = ctx.createLinearGradient(0,0,0,size);
+  g.addColorStop(0,c1); g.addColorStop(1,c2);
+  ctx.fillStyle = g; ctx.fillRect(0,0,size,size);
+
+  // 粒子
+  for(const p of particles){
+    const prog = (p.phase + t) % 1;
+    const sway = Math.sin((p.phase + t) * Math.PI * 2) * p.sway * size;
+    if(state.template === 'balloons'){
+      const y = size*1.08 - prog*size*1.2;
+      const x = p.x*size + sway;
+      const w = size*0.05*p.size, h = w*1.25;
+      ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = Math.max(1,size*0.003);
+      ctx.beginPath(); ctx.moveTo(x, y+h); ctx.lineTo(x+size*0.01, y+h+size*0.08); ctx.stroke();
+      ctx.fillStyle = p.color;
+      ctx.beginPath(); ctx.ellipse(x, y, w, h, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.35)';
+      ctx.beginPath(); ctx.ellipse(x - w*0.3, y - h*0.3, w*0.28, h*0.28, 0, 0, Math.PI*2); ctx.fill();
+    } else {
+      const y = ((p.phase + t) % 1) * size*1.1 - size*0.05;
+      const x = p.x*size + sway;
+      const s = size*0.022*p.size;
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate((p.phase + t) * Math.PI * 4 * p.spin);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(-s/2, -s, s, s*2);
+      ctx.restore();
+    }
+  }
+
+  // テキスト（読みやすさのため影）
+  ctx.textAlign = 'center';
+  ctx.shadowColor = 'rgba(0,0,0,.35)';
+  ctx.shadowBlur = size*0.02;
+  ctx.shadowOffsetY = size*0.004;
+
+  // 絵文字ライン
+  ctx.shadowBlur = 0;
+  ctx.font = `${Math.round(size*0.06)}px sans-serif`;
+  ctx.fillText('🎂 ✨ 🎉', size/2, size*0.28);
+
+  // 名前
+  ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = size*0.02;
+  const nm = (nameInput.value || '').trim();
+  ctx.fillStyle = state.accent;
+  ctx.font = `800 ${Math.round(size*0.13*state.nameScale)}px -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif`;
+  if(nm) ctx.fillText(nm, size/2, size*0.46);
+
+  // メッセージ
+  ctx.fillStyle = state.textColor;
+  const msgFont = Math.round(size*0.062);
+  ctx.font = `600 ${msgFont}px -apple-system,"Hiragino Sans","Noto Sans JP",sans-serif`;
+  const lines = wrapLines(ctx, msgInput.value, size*0.84);
+  let y = size*0.60;
+  for(const ln of lines){ ctx.fillText(ln, size/2, y); y += msgFont*1.32; }
+
+  ctx.shadowColor = 'transparent'; ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+
+  // 透かし（無料版のみ）
+  if(!state.premium){
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.font = `${Math.round(size*0.032)}px sans-serif`;
+    ctx.fillText('ハピバメーカー', size - size*0.03, size - size*0.03);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = 'rgba(255,255,255,.72)';
+    ctx.fillText('made free', size*0.03, size - size*0.03);
+  }
+}
+
+// ---- プレビュー・アニメループ ----
+function loop(now){
+  const period = 1680 / state.speed;
+  const t = (now % period) / period;
+  drawFrame(pctx, t, preview.width);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ---- 入力 ----
+nameInput.addEventListener('input', ()=>{});
+msgInput.addEventListener('input', ()=>{});
+
+// テンプレ切替
+document.getElementById('templateChips').addEventListener('click', e=>{
+  const b = e.target.closest('.chip'); if(!b) return;
+  document.querySelectorAll('#templateChips .chip').forEach(c=>c.classList.remove('active'));
+  b.classList.add('active');
+  state.template = b.dataset.template;
+  buildParticles();
+});
+
+// ============ チャット編集（ルールベース・AI不使用） ============
+const chatlog = document.getElementById('chatlog');
+function addMsg(text, who){
+  const d = document.createElement('div');
+  d.className = 'msg ' + (who==='me'?'me':'bot');
+  d.textContent = text;
+  chatlog.appendChild(d);
+  chatlog.scrollTop = chatlog.scrollHeight;
+}
+function has(s, ...words){ return words.some(w=>s.includes(w)); }
+
+function handleChat(raw){
+  const s = raw.trim();
+  if(!s) return;
+  const applied = [];
+
+  // 色（文字色）
+  for(const [word,hex] of Object.entries(COLORS)){
+    if(s.includes(word) && has(s,'文字','字','テキスト','色') && !has(s,'背景')){
+      state.textColor = hex; applied.push(`文字を「${word}」に`); break;
+    }
+  }
+  // 名前の色（アクセント）
+  if(has(s,'名前') && has(s,'色')){
+    for(const [word,hex] of Object.entries(COLORS)){
+      if(s.includes(word)){ state.accent = hex; applied.push(`名前を「${word}」に`); break; }
+    }
+  }
+  // 単に「〇〇にして」だけ（背景でも名前でもない）→ 文字色
+  if(applied.length===0 && !has(s,'背景','名前','大き','小さ','速','ゆっく','遅','派手','シンプル','風船','紙吹雪','リセット','戻','使い方','ヘルプ','何が')){
+    for(const [word,hex] of Object.entries(COLORS)){
+      if(s.includes(word)){ state.textColor = hex; applied.push(`文字を「${word}」に`); break; }
+    }
+  }
+  // 背景
+  if(has(s,'背景','バック','後ろ','空')){
+    for(const [word,theme] of Object.entries(BG_WORDS)){
+      if(s.includes(word)){ state.bgTheme = theme; applied.push(`背景を変更`); break; }
+    }
+  }
+  // 名前サイズ
+  if(has(s,'名前') || has(s,'字','文字')){
+    if(has(s,'大き')){ state.nameScale = Math.min(1.6, state.nameScale+0.2); applied.push('名前を大きく'); }
+    else if(has(s,'小さ')){ state.nameScale = Math.max(0.6, state.nameScale-0.2); applied.push('名前を小さく'); }
+  }
+  // 速度
+  if(has(s,'速く','はやく','スピード')){ state.speed = Math.min(2.2, state.speed+0.35); applied.push('動きを速く'); }
+  if(has(s,'ゆっく','遅く','おそく')){ state.speed = Math.max(0.4, state.speed-0.35); applied.push('動きをゆっくり'); }
+  // 密度
+  if(has(s,'派手','増や','もっと','たくさん','いっぱい')){ state.density = Math.min(2.2, state.density+0.4); buildParticles(); applied.push('もっと派手に'); }
+  if(has(s,'シンプル','減ら','少な','控えめ')){ state.density = Math.max(0.3, state.density-0.4); buildParticles(); applied.push('シンプルに'); }
+  // テンプレ
+  if(has(s,'風船','バルーン')){ state.template='balloons'; setChipActive('balloons'); buildParticles(); applied.push('風船テンプレに'); }
+  if(has(s,'紙吹雪','コンフェ','花吹雪','キラキラ')){ state.template='confetti'; setChipActive('confetti'); buildParticles(); applied.push('紙吹雪テンプレに'); }
+  // リセット
+  if(has(s,'リセット','戻し','戻す','元に')){ Object.assign(state, DEFAULTS); setChipActive('confetti'); buildParticles(); applied.push('最初の状態に戻し'); }
+  // ヘルプ
+  if(has(s,'使い方','ヘルプ','何が','なにが','help')){
+    addMsg('こんなことが言えるよ👇\n・文字を赤くして / 名前をゴールドに\n・背景を夜空に\n・名前を大きく / 小さく\n・もっと派手に / シンプルに\n・動きを速く / ゆっくり\n・風船にして / 紙吹雪にして\n・リセット', 'bot');
+    return;
+  }
+
+  if(applied.length){
+    addMsg(applied.join('、') + 'したよ！✨ プレビューを見てね。', 'bot');
+  } else {
+    addMsg('うーん、うまく分からなかった🙏「文字を赤くして」「背景を夜空に」みたいに言ってみて。\n「使い方」と打つと一覧が出るよ。', 'bot');
+  }
+}
+function setChipActive(tpl){
+  document.querySelectorAll('#templateChips .chip').forEach(c=>{
+    c.classList.toggle('active', c.dataset.template===tpl);
+  });
+}
+document.getElementById('chatform').addEventListener('submit', e=>{
+  e.preventDefault();
+  const inp = document.getElementById('chatInput');
+  const v = inp.value.trim();
+  if(!v) return;
+  addMsg(v, 'me');
+  inp.value='';
+  setTimeout(()=>handleChat(v), 120);
+});
+document.getElementById('hints').addEventListener('click', e=>{
+  const h = e.target.closest('.hint'); if(!h) return;
+  const v = h.textContent;
+  addMsg(v,'me'); setTimeout(()=>handleChat(v),120);
+});
+addMsg('名前とメッセージを入れて、ここで見た目を調整できるよ🎨\n「文字を赤くして」みたいに話しかけてね。', 'bot');
+
+// ============ GIF書き出し ============
+let workerUrl = 'https://cdnjs.cloudflare.com/ajax/libs/gif.js/0.2.0/gif.worker.js';
+let workerReady = false;
+async function ensureWorker(){
+  if(workerReady) return;
+  try{
+    const r = await fetch(workerUrl);
+    const b = await r.blob();
+    workerUrl = URL.createObjectURL(b); // クロスオリジンWorker回避
+    workerReady = true;
+  }catch(e){ /* だめでも元URLで試す */ workerReady = true; }
+}
+
+const dlBtn = document.getElementById('dlBtn');
+dlBtn.addEventListener('click', async ()=>{
+  if(typeof GIF === 'undefined'){
+    alert('GIFライブラリの読み込みに失敗しました。通信環境を確認してもう一度お試しください。');
+    return;
+  }
+  const label = dlBtn.textContent;
+  dlBtn.disabled = true;
+  dlBtn.innerHTML = '<span class="spin"></span>作成中… 0%';
+  await ensureWorker();
+
+  const size = state.premium ? 512 : 320;
+  const frames = 24, delay = 70;
+  const gif = new GIF({ workers:2, quality:10, width:size, height:size, workerScript: workerUrl, repeat:0 });
+
+  const off = document.createElement('canvas'); off.width=size; off.height=size;
+  const octx = off.getContext('2d');
+  for(let f=0; f<frames; f++){
+    drawFrame(octx, f/frames, size);
+    gif.addFrame(octx, { copy:true, delay });
+  }
+  gif.on('progress', p=>{ dlBtn.innerHTML = '<span class="spin"></span>作成中… ' + Math.round(p*100) + '%'; });
+  gif.on('finished', blob=>{
+    showResult(blob);
+    dlBtn.disabled = false;
+    dlBtn.textContent = label;
+  });
+  gif.render();
+});
+
+function showResult(blob){
+  const url = URL.createObjectURL(blob);
+  document.getElementById('resultImg').src = url;
+  document.getElementById('saveLink').href = url;
+  const res = document.getElementById('result');
+  res.style.display = 'block';
+  res.scrollIntoView({behavior:'smooth', block:'center'});
+
+  // 共有（スマホ・LINE直送）
+  const shareBtn = document.getElementById('shareBtn');
+  try{
+    const file = new File([blob], 'birthday-card.gif', { type:'image/gif' });
+    if(navigator.canShare && navigator.canShare({ files:[file] })){
+      shareBtn.style.display = 'block';
+      shareBtn.onclick = ()=> navigator.share({ files:[file], title:'お誕生日おめでとう！', text:'🎂' }).catch(()=>{});
+    } else {
+      shareBtn.style.display = 'none';
+    }
+  }catch(e){ shareBtn.style.display = 'none'; }
+}
+
+// ============ 課金・ライセンス解除（Gumroad） ============
+const LS_KEY = 'hbd_license_key';
+const paybox = document.getElementById('paybox');
+const buyBtn = document.getElementById('buyBtn');
+const keyInput = document.getElementById('keyInput');
+const unlockBtn = document.getElementById('unlockBtn');
+
+function reflectPremium(){
+  if(state.premium){
+    paybox.classList.add('unlocked');
+    paybox.querySelector('.h').textContent = '✅ 解除済み — 透かしなし・高画質でDLできます';
+    paybox.querySelector('.p').textContent = 'ありがとう！すてきな1枚を贈ってね🎁';
+    buyBtn.style.display = 'none';
+    dlBtn.textContent = '🎁 GIFを作る（透かしなし・高画質）';
+  }
+  document.getElementById('verState').textContent = state.premium ? '· Premium' : '· Free';
+}
+
+buyBtn.addEventListener('click', ()=>{
+  const url = (window.GUMROAD && window.GUMROAD.productUrl) || '';
+  if(url){ window.open(url, '_blank', 'noopener'); }
+  else { alert('現在準備中です🙏 まもなく購入できるようになります。'); }
+});
+
+async function verifyLicense(key){
+  const permalink = (window.GUMROAD && window.GUMROAD.permalink) || '';
+  if(!permalink) return { ok:false, reason:'not_configured' };
+  try{
+    const res = await fetch('https://api.gumroad.com/v2/licenses/verify', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body: new URLSearchParams({ product_permalink:permalink, license_key:key, increment_uses_count:'false' })
+    });
+    const data = await res.json();
+    const refunded = data && data.purchase && (data.purchase.refunded || data.purchase.chargebacked);
+    return { ok: !!(data && data.success) && !refunded, data };
+  }catch(e){ return { ok:false, reason:'network' }; }
+}
+
+unlockBtn.addEventListener('click', async ()=>{
+  const key = keyInput.value.trim();
+  if(!key){ alert('ライセンスキーを貼り付けてね'); return; }
+  unlockBtn.textContent = '確認中…';
+  const r = await verifyLicense(key);
+  unlockBtn.textContent = '解除';
+  if(r.ok){
+    state.premium = true;
+    localStorage.setItem(LS_KEY, key);
+    reflectPremium();
+    addMsg('透かしを解除しました！高画質でDLできるよ✨', 'bot');
+  } else if(r.reason === 'not_configured'){
+    alert('準備中です🙏（開発者へ: Gumroadのpermalinkを設定してください）');
+  } else {
+    alert('キーを確認できませんでした。コピー内容をもう一度チェックしてね。');
+  }
+});
+
+// 起動時：保存済みキーで自動解除
+(async function restore(){
+  const saved = localStorage.getItem(LS_KEY);
+  if(saved && (window.GUMROAD && window.GUMROAD.permalink)){
+    const r = await verifyLicense(saved);
+    if(r.ok){ state.premium = true; }
+  }
+  reflectPremium();
+})();
+</script>
+</body>
+</html>
