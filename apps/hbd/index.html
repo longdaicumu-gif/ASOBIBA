@@ -490,51 +490,104 @@ function drawText(ctx,t,S){
   ctx.shadowColor='transparent'; ctx.shadowBlur=0; ctx.shadowOffsetY=0;
 }
 
-// ===== ふざけ枠①：パチンコ大当り演出 =====
-function drawPachinko(ctx,t,S){
-  const TAU=Math.PI*2, cx=S/2, cy=S/2, hue=(t*360)%360;
-  const bg=ctx.createRadialGradient(cx,cy*0.9,S*0.05,cx,cy,S*0.85);
-  bg.addColorStop(0,'#6a1010'); bg.addColorStop(1,'#070000');
-  ctx.fillStyle=bg; ctx.fillRect(0,0,S,S);
-  // 回転する光の筋（激アツ）
-  ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*TAU*0.15);
-  const rays=16; for(let i=0;i<rays;i++){ ctx.rotate(TAU/rays); ctx.fillStyle=i%2?rgba('#ffcf3a',.16):rgba('#ff4d4d',.11); ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(S,-S*0.07); ctx.lineTo(S,S*0.07); ctx.closePath(); ctx.fill(); }
+// ===== ふざけ枠①：パチンコ大当り演出（ガチ）=====
+function pSpeedLines(ctx,t,S){ // 集中線
+  const cx=S/2, cy=S/2, N=52; ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.35);
+  for(let i=0;i<N;i++){ const a=(i/N)*Math.PI*2, w=(i%2?0.008:0.017)*S*(0.7+0.5*Math.sin(i*2.3+t*8));
+    ctx.save(); ctx.rotate(a); ctx.fillStyle=i%2?'rgba(255,205,60,.15)':'rgba(255,70,70,.11)';
+    ctx.beginPath(); ctx.moveTo(S*0.13,-w*0.4); ctx.lineTo(S,-w*1.8); ctx.lineTo(S,w*1.8); ctx.lineTo(S*0.13,w*0.4); ctx.closePath(); ctx.fill(); ctx.restore(); }
   ctx.restore();
-  // 降ってくるコイン
+}
+function pReels(ctx,t,S){ // ７７７リール（枠付き・揃い光）
+  const y=S*0.155, bw=S*0.185, bh=S*0.175, gap=S*0.018, tot=bw*3+gap*2, x0=S/2-tot/2;
+  for(let i=0;i<3;i++){ const x=x0+i*(bw+gap);
+    ctx.fillStyle='#241100'; rrect(ctx,x-S*0.008,y-bh/2-S*0.008,bw+S*0.016,bh+S*0.016,10); ctx.fill();
+    const wg=ctx.createLinearGradient(0,y-bh/2,0,y+bh/2); wg.addColorStop(0,'#0c0c0c'); wg.addColorStop(.5,'#3a3a3a'); wg.addColorStop(1,'#0c0c0c');
+    ctx.fillStyle=wg; rrect(ctx,x,y-bh/2,bw,bh,8); ctx.fill();
+    ctx.lineWidth=Math.max(2,S*0.007); ctx.strokeStyle='#ffcf3a'; rrect(ctx,x,y-bh/2,bw,bh,8); ctx.stroke();
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`900 ${Math.round(bh*0.82)}px "Arial Black","Arial",sans-serif`;
+    ctx.lineWidth=Math.max(2,S*0.009); ctx.strokeStyle='#ffe37a'; ctx.strokeText('7',x+bw/2,y+bh*0.02);
+    const g7=ctx.createLinearGradient(0,y-bh*0.4,0,y+bh*0.4); g7.addColorStop(0,'#ff7b7b'); g7.addColorStop(1,'#c00000');
+    ctx.fillStyle=g7; ctx.fillText('7',x+bw/2,y+bh*0.02);
+    ctx.fillStyle='rgba(255,255,255,.10)'; rrect(ctx,x+2,y-bh/2+2,bw-4,bh*0.34,7); ctx.fill();
+  }
+  ctx.save(); ctx.globalCompositeOperation='screen'; ctx.globalAlpha=0.35+0.35*Math.sin(t*Math.PI*2*3);
+  ctx.fillStyle='rgba(255,240,150,.7)'; ctx.fillRect(x0-S*0.01,y-S*0.007,tot+S*0.02,S*0.014); ctx.restore();
+}
+function pBadge(ctx,cx,cy,r,fill,text,tsize,tcol,t){ // 激アツ/確定のカットインバッジ
+  const spikes=13; ctx.save(); ctx.translate(cx,cy); ctx.rotate(t*0.6);
+  ctx.beginPath(); for(let i=0;i<spikes*2;i++){ const rr=i%2?r:r*0.68, a=(i/(spikes*2))*Math.PI*2; const x=Math.cos(a)*rr,y=Math.sin(a)*rr; i?ctx.lineTo(x,y):ctx.moveTo(x,y); }
+  ctx.closePath(); ctx.fillStyle=fill; ctx.fill(); ctx.lineWidth=3; ctx.strokeStyle='#fff'; ctx.stroke();
+  ctx.rotate(-t*0.6); ctx.fillStyle=tcol; ctx.font=`900 ${tsize}px "Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText(text,0,0); ctx.restore();
+}
+function pHold(ctx,t,S){ // 保留変化（青→緑→赤→金→虹）
+  const y=S*0.775, n=5, gap=S*0.058, r=S*0.02, x0=S/2-gap*(n-1)/2, cols=['#4da6ff','#3ddc84','#ff4d4d','#ffcf3a'];
+  for(let i=0;i<n;i++){ const x=x0+i*gap, rainbow=(i===n-1);
+    if(rainbow){ const h=(t*360)%360; ctx.fillStyle=`hsl(${h},100%,60%)`; ctx.shadowColor=`hsl(${h},100%,60%)`; ctx.shadowBlur=S*0.03; }
+    else { ctx.fillStyle=cols[i]; ctx.shadowColor=cols[i]; ctx.shadowBlur=S*0.012; }
+    ctx.beginPath(); ctx.arc(x,y,rainbow?r*1.35:r,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,.55)'; ctx.beginPath(); ctx.arc(x-r*0.3,y-r*0.3,r*0.28,0,Math.PI*2); ctx.fill();
+  }
+}
+function pLED(ctx,t,S){ // ドット風LEDカウンター
+  const bw=S*0.52, bh=S*0.072, x=S/2-bw/2, y=S*0.85;
+  ctx.fillStyle='#080808'; rrect(ctx,x,y,bw,bh,6); ctx.fill();
+  ctx.lineWidth=2; ctx.strokeStyle='#2a2a2a'; ctx.stroke();
+  ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=`900 ${Math.round(bh*0.58)}px "Courier New",monospace`;
+  const on=Math.sin(t*Math.PI*2*2)>-0.3;
+  ctx.shadowColor='#ff8a00'; ctx.shadowBlur=S*0.02; ctx.fillStyle=on?'#ffb43a':'#7a4a00';
+  ctx.fillText('◆ 1500玉 GET !! ◆',S/2,y+bh/2+1); ctx.shadowBlur=0;
+}
+function drawPachinko(ctx,t,S){
+  const TAU=Math.PI*2, cx=S/2, hue=(t*360)%360;
+  const bg=ctx.createRadialGradient(cx,S*0.46,S*0.05,cx,S*0.5,S*0.9);
+  bg.addColorStop(0,'#7a1414'); bg.addColorStop(.6,'#3a0505'); bg.addColorStop(1,'#050000');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,S,S);
+  pSpeedLines(ctx,t,S);
+  // 虹オーラ（名前の後ろ・確定オーラ）
+  const ag=ctx.createRadialGradient(cx,S*0.5,0,cx,S*0.5,S*0.42);
+  ag.addColorStop(0,`hsla(${hue},100%,60%,.4)`); ag.addColorStop(.6,`hsla(${(hue+60)%360},100%,55%,.14)`); ag.addColorStop(1,'transparent');
+  ctx.fillStyle=ag; ctx.fillRect(0,S*0.24,S,S*0.52);
+  // コイン
   for(const c of coins){ const prog=(c.phase+t*c.spd)%1, y=prog*S*1.12-S*0.06, x=c.x*S+Math.sin((c.phase+t)*TAU)*S*0.02, d=S*0.07*c.size;
     ctx.save(); ctx.translate(x,y); ctx.rotate((c.phase+t)*TAU*c.spin); ctx.scale(Math.cos((c.phase+t)*TAU*c.spin*1.4),1); ctx.drawImage(getCoin(),-d/2,-d/2,d,d); ctx.restore(); }
-  // フラッシュのキラ
+  // キラ
   ctx.globalCompositeOperation='screen';
   for(const s of sparkles){ const tw=Math.sin((s.phase+t)*TAU); if(tw<=0)continue; const d=s.size*S*(0.6+tw); ctx.save(); ctx.translate(s.x*S,s.y*S); ctx.globalAlpha=tw; ctx.drawImage(getSparkle('#fff3c4'),-d/2,-d/2,d,d); ctx.restore(); }
   ctx.globalCompositeOperation='source-over'; ctx.globalAlpha=1;
+  // リール
+  pReels(ctx,t,S);
+  // カットインバッジ（激アツ / 確定）
+  const pb=1+0.08*Math.sin(t*TAU*3);
+  pBadge(ctx,S*0.145,S*0.145,S*0.072*pb,'#e60000','激アツ',Math.round(S*0.036),'#fff',t);
+  pBadge(ctx,S*0.855,S*0.145,S*0.07*pb,`hsl(${hue},100%,55%)`,'確定',Math.round(S*0.04),'#fff',t);
   ctx.textAlign='center'; ctx.textBaseline='middle';
-  // ７７７
-  const p7=0.92+0.08*Math.sin(t*TAU*4);
-  ctx.save(); ctx.translate(cx,S*0.16); ctx.scale(p7,p7);
-  ctx.font=`900 ${Math.round(S*0.12)}px "Arial Black",sans-serif`;
-  ctx.lineWidth=S*0.013; ctx.strokeStyle='#7a0000'; ctx.strokeText('７ ７ ７',0,0);
-  const g7=ctx.createLinearGradient(0,-S*0.06,0,S*0.06); g7.addColorStop(0,'#fff2a8'); g7.addColorStop(.5,'#ffcf3a'); g7.addColorStop(1,'#c8860a');
-  ctx.fillStyle=g7; ctx.fillText('７ ７ ７',0,0); ctx.restore();
   // ★大当り★
-  ctx.save(); ctx.translate(cx,S*0.32); const pb=1+0.05*Math.sin(t*TAU*3); ctx.scale(pb,pb);
-  ctx.font=`900 ${Math.round(S*0.088)}px "Hiragino Sans","Noto Sans JP",sans-serif`;
-  ctx.lineWidth=S*0.015; ctx.strokeStyle='#6a0000'; ctx.strokeText('★ 大当り ★',0,0);
-  ctx.fillStyle=`hsl(${(hue+50)%360},100%,62%)`; ctx.fillText('★ 大当り ★',0,0); ctx.restore();
+  ctx.save(); ctx.translate(cx,S*0.315); const pB=1+0.05*Math.sin(t*TAU*3); ctx.scale(pB,pB);
+  ctx.font=`900 ${Math.round(S*0.092)}px "Hiragino Sans","Noto Sans JP",sans-serif`;
+  ctx.lineWidth=S*0.016; ctx.strokeStyle='#5a0000'; ctx.strokeText('★ 大当り ★',0,0);
+  const bgd=ctx.createLinearGradient(0,-S*0.05,0,S*0.05); bgd.addColorStop(0,'#fff6b0'); bgd.addColorStop(1,'#ffb200');
+  ctx.fillStyle=bgd; ctx.fillText('★ 大当り ★',0,0); ctx.restore();
   // 名前（激アツ・微振動）
   const nm=(nameInput.value||'').trim();
-  if(nm){ const shake=Math.sin(t*TAU*9)*S*0.006; ctx.save(); ctx.translate(cx+shake,S*0.52);
-    const nfs=Math.round(S*0.145*state.nameScale); ctx.font=`900 ${nfs}px "Hiragino Sans","Noto Sans JP",sans-serif`;
-    ctx.shadowColor=rgba('#ffcf3a',.85); ctx.shadowBlur=S*0.05;
-    ctx.lineWidth=S*0.017; ctx.strokeStyle='#7a0000'; ctx.strokeText(nm,0,0); ctx.shadowBlur=0;
-    const ng=ctx.createLinearGradient(0,-nfs*0.6,0,nfs*0.6); ng.addColorStop(0,'#fff6c0'); ng.addColorStop(.5,'#ffd23f'); ng.addColorStop(1,'#e08a12');
+  if(nm){ const shake=Math.sin(t*TAU*10)*S*0.006; ctx.save(); ctx.translate(cx+shake,S*0.5);
+    const nfs=Math.round(S*0.15*state.nameScale); ctx.font=`900 ${nfs}px "Hiragino Sans","Noto Sans JP",sans-serif`;
+    ctx.shadowColor=rgba('#ffcf3a',.9); ctx.shadowBlur=S*0.055;
+    ctx.lineWidth=S*0.018; ctx.strokeStyle='#5a0000'; ctx.strokeText(nm,0,0); ctx.shadowBlur=0;
+    ctx.lineWidth=S*0.006; ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.strokeText(nm,0,0);
+    const ng=ctx.createLinearGradient(0,-nfs*0.6,0,nfs*0.6); ng.addColorStop(0,'#fff8d0'); ng.addColorStop(.5,'#ffd23f'); ng.addColorStop(1,'#e08a12');
     ctx.fillStyle=ng; ctx.fillText(nm,0,0); ctx.restore(); }
   // メッセージ
-  ctx.fillStyle='#ffffff'; const mfs=Math.round(S*0.055);
-  ctx.font=`800 ${mfs}px "Hiragino Sans","Noto Sans JP",sans-serif`; ctx.lineWidth=mfs*0.2; ctx.strokeStyle='rgba(120,0,0,.85)';
-  const lines=wrapLines(ctx,msgInput.value,S*0.82); let y=S*0.67; for(const ln of lines){ ctx.strokeText(ln,cx,y); ctx.fillText(ln,cx,y); y+=mfs*1.3; }
-  // 虹枠（プレミアム確定）
-  const fm=S*0.03; ctx.lineWidth=S*0.02; ctx.strokeStyle=`hsl(${hue},100%,58%)`; rrect(ctx,fm,fm,S-2*fm,S-2*fm,S*0.04); ctx.stroke();
-  ctx.lineWidth=S*0.006; ctx.strokeStyle=`hsl(${(hue+180)%360},100%,72%)`; rrect(ctx,fm+S*0.016,fm+S*0.016,S-2*fm-S*0.032,S-2*fm-S*0.032,S*0.03); ctx.stroke();
+  ctx.fillStyle='#ffffff'; const mfs=Math.round(S*0.05);
+  ctx.font=`800 ${mfs}px "Hiragino Sans","Noto Sans JP",sans-serif`; ctx.lineWidth=mfs*0.22; ctx.strokeStyle='rgba(90,0,0,.9)';
+  const lines=wrapLines(ctx,msgInput.value,S*0.8); let y=S*0.635; for(const ln of lines){ ctx.strokeText(ln,cx,y); ctx.fillText(ln,cx,y); y+=mfs*1.28; }
+  // 保留 & LED
+  pHold(ctx,t,S); pLED(ctx,t,S);
+  // 虹枠（本物の虹・回転）
+  const fm=S*0.026, hues=[0,45,95,160,210,285];
+  for(let i=0;i<hues.length;i++){ const off=fm+i*S*0.0075, h=(hues[i]+t*150)%360;
+    ctx.strokeStyle=`hsl(${h},100%,60%)`; ctx.lineWidth=S*0.0072; rrect(ctx,off,off,S-2*off,S-2*off,S*0.045-i*S*0.004); ctx.stroke(); }
 }
 
 // ===== ふざけ枠②：弾幕（ニコニコ風コメント）=====
