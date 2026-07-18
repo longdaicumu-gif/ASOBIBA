@@ -117,6 +117,10 @@
       <button class="chip" data-theme="thanks"><span class="em">🌸</span>ありがとう</button>
       <button class="chip" data-theme="pachinko"><span class="em">🎰</span>パチンコ</button>
       <button class="chip" data-theme="danmaku"><span class="em">💬</span>弾幕</button>
+      <button class="chip" data-theme="cinema"><span class="em">🎬</span>映画予告</button>
+      <button class="chip" data-theme="news"><span class="em">📺</span>速報</button>
+      <button class="chip" data-theme="eva"><span class="em">🖤</span>おめでとう</button>
+      <button class="chip" data-theme="thread"><span class="em">🧵</span>スレ</button>
     </div>
 
     <label class="fld">
@@ -136,10 +140,10 @@
     <div class="chatlog" id="chatlog"></div>
     <div class="hintrow" id="hints">
       <span class="hint">パチンコにして</span>
-      <span class="hint">弾幕にして</span>
-      <span class="hint">ハートを降らせて</span>
-      <span class="hint">背景を夜空に</span>
-      <span class="hint">キラキラ増やして</span>
+      <span class="hint">映画予告にして</span>
+      <span class="hint">速報にして</span>
+      <span class="hint">黒画面にして</span>
+      <span class="hint">スレにして</span>
     </div>
     <form class="chatform" id="chatform" autocomplete="off">
       <input id="chatInput" type="text" placeholder="例: 風船を飛ばして / 文字を白く" />
@@ -204,6 +208,10 @@ const THEMES = {
   // ▼ ふざけ枠（自前で全部描画するテーマ）
   pachinko:    { label:'FEVER', bg:['#5a0d0d','#0a0000'], accent:'#ffd23f', sparkle:'#fff3c4', motif:'coins',    custom:'pachinko' },
   danmaku:     { label:'',      bg:['#12131a','#05060a'], accent:'#ffffff', sparkle:'#ffffff', motif:'comments', custom:'niconico' },
+  cinema:      { label:'',      bg:['#0b0b12','#000000'], accent:'#ffd76a', sparkle:'#fff4c4', motif:'', custom:'cinema' },
+  news:        { label:'',      bg:['#0c2f52','#06121f'], accent:'#ffffff', sparkle:'#bfe0ff', motif:'', custom:'news' },
+  eva:         { label:'',      bg:['#000000','#000000'], accent:'#ffffff', sparkle:'#ffffff', motif:'', custom:'eva' },
+  thread:      { label:'',      bg:['#efecd9','#e4dcc8'], accent:'#111111', sparkle:'#cccccc', motif:'', custom:'thread' },
 };
 
 // ---- 状態 ----
@@ -228,6 +236,10 @@ const DEFAULT_MSG = {
   thanks:'本当にありがとう\n感謝しています',
   pachinko:'確変突入\nおめでとう！',
   danmaku:'おめでとう！',
+  cinema:'全人類が、祝福した。',
+  news:'本日、誕生日を迎えられました',
+  eva:'おめでとう',
+  thread:'おめでとう！',
 };
 let msgTouched=false;
 msgInput.addEventListener('input', ()=>{ msgTouched=true; });
@@ -297,6 +309,7 @@ function buildScene(){
     return;
   }
   if(t.custom==='niconico'){ buildComments(); return; }
+  if(t.custom){ return; } // 映画/速報/おめでとう/スレ は追加粒子なし（orbs/sparklesのみ使用）
   // メインの舞い散る粒（通常テーマ）
   r=rng(1357);
   const motif=state.motif;
@@ -343,6 +356,10 @@ function drawFrame(ctx, t, S){
   const cust=THEMES[state.theme].custom;
   if(cust==='pachinko'){ drawPachinko(ctx,t,S); drawWatermark(ctx,S); return; }
   if(cust==='niconico'){ drawNiconico(ctx,t,S); drawWatermark(ctx,S); return; }
+  if(cust==='cinema'){ drawCinema(ctx,t,S); drawWatermark(ctx,S); return; }
+  if(cust==='news'){ drawNews(ctx,t,S); drawWatermark(ctx,S); return; }
+  if(cust==='eva'){ drawEva(ctx,t,S); drawWatermark(ctx,S); return; }
+  if(cust==='thread'){ drawThread(ctx,t,S); drawWatermark(ctx,S); return; }
   const TAU=Math.PI*2;
   // 背景グラデ
   const bg=ctx.createLinearGradient(0,0,0,S); bg.addColorStop(0,state.bg[0]); bg.addColorStop(1,state.bg[1]);
@@ -406,8 +423,9 @@ function drawFrame(ctx, t, S){
 
 function drawWatermark(ctx,S){
   if(state.premium) return;
+  const light = state.theme==='thread';
   ctx.save(); ctx.textAlign='right'; ctx.textBaseline='alphabetic';
-  ctx.fillStyle=rgba('#ffffff',.72); ctx.font=`${Math.round(S*0.03)}px sans-serif`;
+  ctx.fillStyle=light?'rgba(0,0,0,.4)':'rgba(255,255,255,.72)'; ctx.font=`${Math.round(S*0.03)}px sans-serif`;
   ctx.fillText('おいわいメーカー', S-S*0.03, S-S*0.03);
   ctx.textAlign='left'; ctx.fillText('made free', S*0.03, S-S*0.03);
   ctx.restore();
@@ -616,6 +634,117 @@ function drawNiconico(ctx,t,S){
   ctx.textAlign='left';
 }
 
+// ===== ネタ枠①：映画予告風（全世界が泣いた／製作費5兆円）=====
+function drawCinema(ctx,t,S){
+  const TAU=Math.PI*2, cx=S/2, MIN='"Hiragino Mincho ProN","Yu Mincho",serif';
+  const bg=ctx.createRadialGradient(cx,S*0.42,S*0.05,cx,S*0.5,S*0.9); bg.addColorStop(0,'#1b1b26'); bg.addColorStop(1,'#000');
+  ctx.fillStyle=bg; ctx.fillRect(0,0,S,S);
+  // スポットライト
+  ctx.save(); ctx.globalCompositeOperation='screen'; const sx=cx+Math.sin(t*TAU)*S*0.22;
+  const sg=ctx.createRadialGradient(sx,S*0.3,0,sx,S*0.3,S*0.6); sg.addColorStop(0,'rgba(255,240,200,.12)'); sg.addColorStop(1,'transparent');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,S,S); ctx.restore();
+  // 光の粉
+  ctx.save(); ctx.globalCompositeOperation='screen';
+  for(const s of sparkles){ const y=(((s.phase - t*0.1)%1)+1)%1, a=0.25+0.3*Math.sin((s.phase+t)*TAU), d=s.size*S*0.5;
+    ctx.globalAlpha=Math.max(0,a); ctx.drawImage(getSparkle('#fff4c4'), s.x*S-d/2, y*S-d/2, d, d); }
+  ctx.restore(); ctx.globalAlpha=1;
+  // レターボックス
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,S,S*0.08); ctx.fillRect(0,S*0.92,S,S*0.08);
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='#ffd23f'; ctx.font=`${Math.round(S*0.05)}px serif`; ctx.fillText('★ ★ ★ ★ ★',cx,S*0.185);
+  ctx.fillStyle='#fff'; ctx.font=`${Math.round(S*0.044)}px ${MIN}`; ctx.fillText('全 世 界 が 、 泣 い た 。',cx,S*0.255);
+  const nm=(nameInput.value||'').trim();
+  if(nm){ const p=1+0.02*Math.sin(t*TAU); ctx.save(); ctx.translate(cx,S*0.42); ctx.scale(p,p);
+    const nfs=Math.round(S*0.155*state.nameScale); ctx.font=`900 ${nfs}px ${MIN}`;
+    ctx.shadowColor='rgba(255,210,120,.5)'; ctx.shadowBlur=S*0.04;
+    const g=ctx.createLinearGradient(0,-nfs*0.6,0,nfs*0.6); g.addColorStop(0,'#ffffff'); g.addColorStop(1,'#ffcf6a'); ctx.fillStyle=g;
+    ctx.fillText(nm,0,0); ctx.restore(); ctx.shadowBlur=0; }
+  ctx.fillStyle='#f0e6d0'; const mfs=Math.round(S*0.05); ctx.font=`${mfs}px ${MIN}`;
+  const lines=wrapLines(ctx,msgInput.value,S*0.82); let y=S*0.575; for(const ln of lines){ ctx.fillText(ln,cx,y); y+=mfs*1.35; }
+  ctx.fillStyle='#cfc6b2'; ctx.font=`${Math.round(S*0.031)}px ${MIN}`; ctx.fillText('「人生で、一番の日だった」——全国映画評論家',cx,S*0.74);
+  ctx.fillStyle='#ffd23f'; ctx.font=`900 ${Math.round(S*0.04)}px sans-serif`; ctx.fillText('製作費 5兆円 ／ 全国ロードショー',cx,S*0.865);
+  // 感動 判子
+  ctx.save(); ctx.translate(S*0.82,S*0.28); ctx.rotate(-0.2); ctx.strokeStyle='#ff3b3b'; ctx.lineWidth=S*0.006;
+  ctx.beginPath(); ctx.arc(0,0,S*0.078,0,TAU); ctx.stroke();
+  ctx.fillStyle='#ff3b3b'; ctx.font=`900 ${Math.round(S*0.056)}px ${MIN}`; ctx.fillText('感動',0,S*0.004); ctx.restore();
+}
+
+// ===== ネタ枠②：ニュース速報 =====
+function drawNews(ctx,t,S){
+  const TAU=Math.PI*2;
+  const bg=ctx.createLinearGradient(0,0,0,S); bg.addColorStop(0,'#0c2f52'); bg.addColorStop(1,'#06121f'); ctx.fillStyle=bg; ctx.fillRect(0,0,S,S);
+  ctx.fillStyle='rgba(255,255,255,.04)'; rrect(ctx,S*0.06,S*0.2,S*0.88,S*0.5,10); ctx.fill();
+  const nm=(nameInput.value||'').trim();
+  // 速報（点滅）
+  if(Math.sin(t*TAU*2)>-0.2){ ctx.fillStyle='#e60012'; rrect(ctx,S*0.05,S*0.06,S*0.27,S*0.09,6); ctx.fill();
+    ctx.fillStyle='#fff'; ctx.font=`900 ${Math.round(S*0.05)}px "Hiragino Sans",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('速報',S*0.185,S*0.107); }
+  // LIVE + 時刻
+  ctx.textAlign='right'; ctx.textBaseline='middle';
+  ctx.fillStyle='#ff5a5a'; ctx.font=`900 ${Math.round(S*0.032)}px sans-serif`; ctx.fillText('● LIVE',S*0.95,S*0.1);
+  ctx.fillStyle='#cfe0f5'; ctx.font=`${Math.round(S*0.03)}px monospace`; ctx.fillText((7+Math.floor(t*4)%12).toString().padStart(2,'0')+':00',S*0.95,S*0.15);
+  // 見出し
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillStyle='rgba(0,0,0,.35)'; rrect(ctx,S*0.08,S*0.32,S*0.84,S*0.32,8); ctx.fill();
+  if(nm){ ctx.fillStyle='#ffe23a'; const nfs=Math.round(S*0.105*state.nameScale); ctx.font=`900 ${nfs}px "Hiragino Sans",sans-serif`;
+    ctx.lineWidth=S*0.01; ctx.strokeStyle='rgba(0,0,0,.6)'; ctx.strokeText(nm,S*0.5,S*0.42); ctx.fillText(nm,S*0.5,S*0.42); }
+  ctx.fillStyle='#fff'; const mfs=Math.round(S*0.05); ctx.font=`800 ${mfs}px "Hiragino Sans",sans-serif`;
+  const lines=wrapLines(ctx,msgInput.value,S*0.78); let y=S*0.53; for(const ln of lines){ ctx.lineWidth=mfs*0.16; ctx.strokeStyle='rgba(0,0,0,.6)'; ctx.strokeText(ln,S*0.5,y); ctx.fillText(ln,S*0.5,y); y+=mfs*1.25; }
+  // 下部テロップ
+  ctx.fillStyle='#0a1c30'; ctx.fillRect(0,S*0.8,S,S*0.14);
+  ctx.fillStyle='#e60012'; ctx.fillRect(0,S*0.8,S*0.24,S*0.14);
+  ctx.fillStyle='#fff'; ctx.font=`900 ${Math.round(S*0.04)}px "Hiragino Sans",sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('ニュース',S*0.12,S*0.87);
+  const tick=`＜お祝い＞ ${nm||'あなた'}さん、本日めでたく記念すべき日を迎えられました　各地からお祝いのメッセージが殺到し、現場は祝福ムードに包まれています　◆　`;
+  const areaX=S*0.24, areaW=S-areaX; ctx.font=`${Math.round(S*0.042)}px "Hiragino Sans",sans-serif`; ctx.textAlign='left';
+  const w=ctx.measureText(tick).width, total=areaW+w, x=S-((t)%1)*total;
+  ctx.save(); ctx.beginPath(); ctx.rect(areaX,S*0.8,areaW,S*0.14); ctx.clip(); ctx.fillStyle='#fff'; ctx.fillText(tick,x,S*0.872); ctx.restore();
+  ctx.textAlign='left';
+}
+
+// ===== ネタ枠③：おめでとう（黒背景・白文字カット）=====
+function drawEva(ctx,t,S){
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,S,S);
+  const nm=(nameInput.value||'').trim();
+  const cards=[
+    {tx:'おめでとう', f:`900 ${Math.round(S*0.17)}px "Hiragino Sans",sans-serif`},
+    {tx:'おめでとう', f:`${Math.round(S*0.13)}px "Hiragino Mincho ProN","Yu Mincho",serif`},
+    {tx:'オメデトウ', f:`900 ${Math.round(S*0.15)}px sans-serif`},
+    {tx:'お め で と う', f:`${Math.round(S*0.088)}px "Hiragino Mincho ProN",serif`},
+    {tx:(nm?nm:'あなた')+'\nおめでとう', f:`900 ${Math.round(S*0.1)}px "Hiragino Sans",sans-serif`},
+    {tx:'おめでとう', f:`900 ${Math.round(S*0.21)}px "Hiragino Sans",sans-serif`},
+    {tx:'パチパチパチ', f:`${Math.round(S*0.08)}px "Hiragino Mincho ProN",serif`},
+    {tx:'おめでとう', f:`italic 900 ${Math.round(S*0.14)}px serif`},
+  ];
+  const c=cards[Math.floor(t*cards.length)%cards.length];
+  ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.font=c.f;
+  const ls=c.tx.split('\n'); let yy=S*0.47-(ls.length-1)*S*0.08; for(const ln of ls){ ctx.fillText(ln,S*0.5,yy); yy+=S*0.16; }
+  const msg=(msgInput.value||'').split('\n')[0]||'';
+  ctx.font=`${Math.round(S*0.038)}px "Hiragino Mincho ProN",serif`; ctx.fillStyle='rgba(255,255,255,.7)'; ctx.fillText(msg,S*0.5,S*0.86);
+}
+
+// ===== ネタ枠④：スレ風（>>1・風吹けば名無し）=====
+function drawThread(ctx,t,S){
+  ctx.fillStyle='#efecd9'; ctx.fillRect(0,0,S,S);
+  const nm=(nameInput.value||'').trim()||'名無し';
+  const msg=(msgInput.value||'').split('\n')[0]||'おめでとう';
+  ctx.fillStyle='#8b0000'; ctx.fillRect(0,0,S,S*0.1);
+  ctx.fillStyle='#fff'; ctx.textAlign='left'; ctx.textBaseline='middle'; ctx.font=`900 ${Math.round(S*0.034)}px "Hiragino Sans",sans-serif`;
+  ctx.fillText(`【祝】${nm}さん、ついに誕生日を迎えるｗｗｗ`,S*0.03,S*0.052);
+  const posts=[msg,'ｷﾀ━━━(ﾟ∀ﾟ)━━━!!',`おめでとう！！${nm}神！`,'８８８８８８８８',' ｵﾒﾃﾞﾄ','>>1 ありがとうやで'];
+  let y=S*0.15;
+  posts.forEach((b,i)=>{
+    ctx.fillStyle='#008000'; ctx.font=`bold ${Math.round(S*0.026)}px "Hiragino Sans",sans-serif`;
+    ctx.fillText(`${i+1} ：風吹けば名無し ：25/07/18(金) ${(10+i)}:0${i} ID:aB${i}Cd`,S*0.03,y); y+=S*0.038;
+    ctx.fillStyle= b.startsWith('>>')?'#0000c0':'#111'; ctx.font=`${Math.round(S*0.04)}px "Hiragino Sans",sans-serif`;
+    ctx.fillText(b,S*0.06,y); y+=S*0.067;
+  });
+  // 書き込み欄
+  ctx.strokeStyle='#b3ad97'; ctx.lineWidth=1; ctx.strokeRect(S*0.03,S*0.86,S*0.94,S*0.085);
+  ctx.fillStyle='#111'; ctx.font=`${Math.round(S*0.038)}px "Hiragino Sans",sans-serif`;
+  ctx.fillText('おめでとう'+((Math.sin(t*Math.PI*2*2)>0)?'｜':''),S*0.055,S*0.903);
+  ctx.fillStyle='#c00'; rrect(ctx,S*0.79,S*0.872,S*0.16,S*0.062,4); ctx.fill();
+  ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.fillText('書き込む',S*0.87,S*0.903); ctx.textAlign='left';
+}
+
 buildScene();
 
 // ---- プレビュー・ループ ----
@@ -651,7 +780,7 @@ function handleChat(raw){
     addMsg('こんなことが言えるよ👇\n・パチンコにして / 弾幕にして（ふざけ枠🤣）\n・誕生日 / 記念日 / 感謝 に切替\n・ハートを降らせて / 風船を飛ばして / 花びらに\n・キラキラ増やして\n・背景を夜空に\n・文字を白く / 名前を金色に\n・名前を大きく / 小さく\n・もっと派手に / シンプルに\n・動きを速く / ゆっくり\n・リセット','bot'); return;
   }
   // テーマ切替（ふざけ枠含む）
-  const TW={ 'パチンコ':'pachinko','ぱちんこ':'pachinko','大当':'pachinko','フィーバー':'pachinko','スロット':'pachinko','弾幕':'danmaku','ニコニコ':'danmaku','コメント':'danmaku','誕生':'birthday','記念':'anniversary','感謝':'thanks' };
+  const TW={ 'パチンコ':'pachinko','ぱちんこ':'pachinko','大当':'pachinko','フィーバー':'pachinko','スロット':'pachinko','弾幕':'danmaku','ニコニコ':'danmaku','コメント':'danmaku','映画':'cinema','予告':'cinema','全米':'cinema','全世界':'cinema','速報':'news','ニュース':'news','テロップ':'news','黒画面':'eva','エヴァ':'eva','スレ':'thread','掲示板':'thread','なんJ':'thread','誕生':'birthday','記念':'anniversary','感謝':'thanks' };
   for(const [w,key] of Object.entries(TW)){ if(s.includes(w)){ applyTheme(key); addMsg('テーマを「'+w+'」系に変えたよ！✨','bot'); return; } }
   // モチーフ
   if(has(s,'ハート','はーと')){ state.motif='hearts'; buildScene(); applied.push('ハートを舞わせ'); }
