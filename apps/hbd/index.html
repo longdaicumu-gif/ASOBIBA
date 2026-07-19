@@ -94,6 +94,13 @@
   .footer{ text-align:center; color:var(--sub); font-size:11.5px; margin-top:22px; line-height:1.7;}
   .spin{display:inline-block; width:15px; height:15px; border:2px solid rgba(255,255,255,.5); border-top-color:#fff; border-radius:50%; animation:sp .8s linear infinite; vertical-align:-2px; margin-right:6px;}
   @keyframes sp{to{transform:rotate(360deg)}}
+  .seg .chip{position:relative;}
+  .seg .chip .lock{position:absolute; top:3px; right:5px; font-size:10px; filter:drop-shadow(0 1px 1px rgba(0,0,0,.6));}
+  body.pro-on .seg .chip .lock{display:none;}
+  .paybox.flash{animation:pbf 1.1s ease;}
+  @keyframes pbf{0%,100%{box-shadow:var(--shadow)} 25%,75%{box-shadow:0 0 0 3px rgba(255,207,92,.9)}}
+  .freelabel{font-size:12.5px; color:#ffd777; font-weight:800; margin-bottom:7px; text-align:center;}
+  .upcta{margin-top:10px;}
 </style>
 </head>
 <body>
@@ -115,10 +122,10 @@
       <button class="chip" data-theme="congrats"><span class="em">🎉</span>お祝い</button>
       <button class="chip" data-theme="anniversary"><span class="em">💐</span>記念日</button>
       <button class="chip" data-theme="thanks"><span class="em">🌸</span>ありがとう</button>
-      <button class="chip" data-theme="pachinko"><span class="em">🎰</span>パチンコ</button>
+      <button class="chip" data-theme="pachinko"><i class="lock">💎</i><span class="em">🎰</span>パチンコ</button>
       <button class="chip" data-theme="danmaku"><span class="em">💬</span>弾幕</button>
-      <button class="chip" data-theme="cinema"><span class="em">🎬</span>映画予告</button>
-      <button class="chip" data-theme="news"><span class="em">📺</span>速報</button>
+      <button class="chip" data-theme="cinema"><i class="lock">💎</i><span class="em">🎬</span>映画予告</button>
+      <button class="chip" data-theme="news"><i class="lock">💎</i><span class="em">📺</span>速報</button>
       <button class="chip" data-theme="eva"><span class="em">🖤</span>おめでとう</button>
       <button class="chip" data-theme="thread"><span class="em">🧵</span>スレ</button>
     </div>
@@ -159,9 +166,9 @@
 
     <!-- 課金導線 -->
     <div class="paybox" id="paybox">
-      <div class="h">✨ 透かしを消して“最高画質”に（100円・買い切り）</div>
-      <div class="p">送り物だから、透かしなし・大きな高画質GIFで。一度買えばずっと使えます。</div>
-      <button class="btn gold" id="buyBtn">100円で透かしを消す</button>
+      <div class="h">✨ ¥100で“ちゃんとしたやつ”に（買い切り・全部解放）</div>
+      <div class="p">💎パチンコ・5兆円・速報… 全ネタ保存OK＋高画質＆なめらか＋ロゴなし。プレビューはずっと無料。</div>
+      <button class="btn gold" id="buyBtn">¥100 で全部解放する</button>
       <div class="keyrow">
         <input id="keyInput" type="text" placeholder="購入後のライセンスキーを貼り付け" />
         <button class="unlockbtn" id="unlockBtn">解除</button>
@@ -170,7 +177,11 @@
 
     <!-- 結果 -->
     <div class="result" id="result">
+      <div class="freelabel" id="freeLabel" style="display:none;">🆓 無料版（低画質・ロゴ入り）</div>
       <img id="resultImg" alt="できあがったお祝いGIF" />
+      <div class="upcta" id="upCta" style="display:none;">
+        <button class="btn gold" id="upBtn">✨ ¥100で 高画質・ロゴなしにする（全ネタ解放）</button>
+      </div>
       <div class="actions" style="margin-top:10px;">
         <button class="btn primary" id="shareBtn" style="display:none;">📲 このGIFを送る / 共有</button>
         <a class="btn ghost" id="saveLink" download="oiwai.gif" style="text-decoration:none; display:block; text-align:center;">⬇️ 保存する</a>
@@ -206,10 +217,10 @@ const THEMES = {
   anniversary: { label:'FOR YOU',           bg:['#ff5f7e','#c33764'], accent:'#ffd9a8', sparkle:'#ffdbe6', motif:'hearts',   parts:['#ff92ac','#ffffff','#ffd1dc','#ff6f91'] },
   thanks:      { label:'THANK YOU',         bg:['#3fae86','#e9c24f'], accent:'#fff0b0', sparkle:'#fffde7', motif:'petals',   parts:['#ffd6ec','#fff3b0','#ffffff','#c8f7d4'] },
   // ▼ ふざけ枠（自前で全部描画するテーマ）
-  pachinko:    { label:'FEVER', bg:['#5a0d0d','#0a0000'], accent:'#ffd23f', sparkle:'#fff3c4', motif:'coins',    custom:'pachinko' },
+  pachinko:    { label:'FEVER', bg:['#5a0d0d','#0a0000'], accent:'#ffd23f', sparkle:'#fff3c4', motif:'coins',    custom:'pachinko', pro:true },
   danmaku:     { label:'',      bg:['#12131a','#05060a'], accent:'#ffffff', sparkle:'#ffffff', motif:'comments', custom:'niconico' },
-  cinema:      { label:'',      bg:['#0b0b12','#000000'], accent:'#ffd76a', sparkle:'#fff4c4', motif:'', custom:'cinema' },
-  news:        { label:'',      bg:['#0c2f52','#06121f'], accent:'#ffffff', sparkle:'#bfe0ff', motif:'', custom:'news' },
+  cinema:      { label:'',      bg:['#0b0b12','#000000'], accent:'#ffd76a', sparkle:'#fff4c4', motif:'', custom:'cinema', pro:true },
+  news:        { label:'',      bg:['#0c2f52','#06121f'], accent:'#ffffff', sparkle:'#bfe0ff', motif:'', custom:'news', pro:true },
   eva:         { label:'',      bg:['#000000','#000000'], accent:'#ffffff', sparkle:'#ffffff', motif:'', custom:'eva' },
   thread:      { label:'',      bg:['#efecd9','#e4dcc8'], accent:'#111111', sparkle:'#cccccc', motif:'', custom:'thread' },
 };
@@ -421,13 +432,16 @@ function drawFrame(ctx, t, S){
   drawWatermark(ctx,S);
 }
 
+let EXPORTING=false; // 書き出し中だけ透かしを焼く（プレビューは常にキレイ）
 function drawWatermark(ctx,S){
-  if(state.premium) return;
-  const light = state.theme==='thread';
-  ctx.save(); ctx.textAlign='right'; ctx.textBaseline='alphabetic';
-  ctx.fillStyle=light?'rgba(0,0,0,.4)':'rgba(255,255,255,.72)'; ctx.font=`${Math.round(S*0.03)}px sans-serif`;
-  ctx.fillText('おいわいメーカー', S-S*0.03, S-S*0.03);
-  ctx.textAlign='left'; ctx.fillText('made free', S*0.03, S-S*0.03);
+  if(state.premium || !EXPORTING) return;
+  ctx.save();
+  const txt='🆓 無料版 · おいわいメーカー', fs=Math.round(S*0.034);
+  ctx.font=`700 ${fs}px sans-serif`;
+  const w=ctx.measureText(txt).width, padX=S*0.032, h=fs+S*0.03, bw=w+padX*2, bx=(S-bw)/2, by=S-h-S*0.028;
+  ctx.fillStyle='rgba(0,0,0,.45)'; rrect(ctx,bx,by,bw,h,h/2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,.94)'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(txt,S/2,by+h/2+0.5);
   ctx.restore();
 }
 
@@ -760,7 +774,7 @@ function applyTheme(key){
   Object.assign(state, themeDefaults(key), { premium:state.premium });
   document.querySelectorAll('#themeSeg .chip').forEach(c=>c.classList.toggle('active', c.dataset.theme===key));
   if(!msgTouched && DEFAULT_MSG[key]) msgInput.value=DEFAULT_MSG[key];
-  buildScene();
+  buildScene(); updateMakeButton(); resetPaybox();
 }
 document.getElementById('themeSeg').addEventListener('click', e=>{
   const b=e.target.closest('.chip'); if(!b) return; applyTheme(b.dataset.theme);
@@ -823,13 +837,18 @@ async function ensureWorker(){ if(workerReady) return; try{ const r=await fetch(
 
 const dlBtn=document.getElementById('dlBtn');
 dlBtn.addEventListener('click', async ()=>{
+  // プレミアムネタは保存の瞬間に課金導線へ（プレビューはフルで見せる）
+  if(THEMES[state.theme].pro && !state.premium){ showProGate(); return; }
   if(typeof GIF==='undefined'){ alert('GIFライブラリの読み込みに失敗しました。通信環境を確認してもう一度お試しください。'); return; }
   const label=dlBtn.textContent; dlBtn.disabled=true; dlBtn.innerHTML='<span class="spin"></span>作成中… 0%';
   await ensureWorker();
-  const S=state.premium?512:336, frames=28, delay=64;
+  // 無料=低画質・カクカク / ¥100=高画質・なめらか
+  const S=state.premium?512:320, frames=state.premium?30:18, delay=state.premium?60:95;
   const gif=new GIF({ workers:2, quality:10, width:S, height:S, workerScript:workerUrl, repeat:0 });
   const off=makeCanvas(S), octx=off.getContext('2d');
+  EXPORTING=true;
   for(let f=0; f<frames; f++){ drawFrame(octx, f/frames, S); gif.addFrame(octx,{copy:true, delay}); }
+  EXPORTING=false;
   gif.on('progress', p=>{ dlBtn.innerHTML='<span class="spin"></span>作成中… '+Math.round(p*100)+'%'; });
   gif.on('finished', blob=>{ showResult(blob); dlBtn.disabled=false; dlBtn.textContent=label; });
   gif.render();
@@ -840,6 +859,9 @@ function showResult(blob){
   document.getElementById('resultImg').src=url;
   document.getElementById('saveLink').href=url;
   const res=document.getElementById('result'); res.style.display='block'; res.scrollIntoView({behavior:'smooth',block:'center'});
+  const free=!state.premium;
+  document.getElementById('freeLabel').style.display=free?'block':'none';
+  document.getElementById('upCta').style.display=free?'block':'none';
   const shareBtn=document.getElementById('shareBtn');
   try{
     const file=new File([blob],'oiwai.gif',{type:'image/gif'});
@@ -851,16 +873,36 @@ function showResult(blob){
 // ============ 課金・ライセンス解除（Gumroad） ============
 const LS_KEY='oiwai_license_key';
 const paybox=document.getElementById('paybox'), buyBtn=document.getElementById('buyBtn'), keyInput=document.getElementById('keyInput'), unlockBtn=document.getElementById('unlockBtn');
+const PB_H='✨ ¥100で“ちゃんとしたやつ”に（買い切り・全部解放）';
+const PB_P='💎パチンコ・5兆円・速報… 全ネタ保存OK＋高画質＆なめらか＋ロゴなし。プレビューはずっと無料。';
 function reflectPremium(){
   if(state.premium){
+    document.body.classList.add('pro-on');
     paybox.classList.add('unlocked');
-    paybox.querySelector('.h').textContent='✅ 解除済み — 透かしなし・高画質でDLできます';
-    paybox.querySelector('.p').textContent='ありがとう！すてきな1枚を贈ってね🎁';
-    buyBtn.style.display='none'; dlBtn.textContent='🎁 GIFを作る（透かしなし・高画質）';
+    paybox.querySelector('.h').textContent='✅ 解放済み — 全ネタ保存OK・高画質・ロゴなし';
+    paybox.querySelector('.p').textContent='ありがとう！好きなだけ作って送ってね🎁';
+    buyBtn.style.display='none';
+    const fl=document.getElementById('freeLabel'), uc=document.getElementById('upCta'); if(fl)fl.style.display='none'; if(uc)uc.style.display='none';
   }
+  updateMakeButton();
   document.getElementById('verState').textContent=state.premium?'· Premium':'· Free';
 }
+function updateMakeButton(){
+  if(state.premium) dlBtn.textContent='🎁 GIFを作る（高画質・ロゴなし）';
+  else if(THEMES[state.theme].pro) dlBtn.textContent='🔒 保存は¥100（プレミアムネタ）';
+  else dlBtn.textContent='🎁 GIFを作る（無料）';
+}
+function resetPaybox(){ if(state.premium) return; paybox.classList.remove('flash'); paybox.querySelector('.h').textContent=PB_H; paybox.querySelector('.p').textContent=PB_P; }
+function flashPaybox(){ paybox.scrollIntoView({behavior:'smooth',block:'center'}); paybox.classList.remove('flash'); void paybox.offsetWidth; paybox.classList.add('flash'); }
+function showProGate(){
+  const nm={pachinko:'パチンコ',cinema:'映画予告(5兆円)',news:'速報'}[state.theme]||'このネタ';
+  paybox.querySelector('.h').textContent=`🔒『${nm}』はプレミアムネタ`;
+  paybox.querySelector('.p').textContent='プレビューはフルで見れるよ😎 保存＆全ネタ解放は¥100（買い切り）。高画質＆ロゴなしにもなる。';
+  flashPaybox();
+  addMsg(`「${nm}」はプレミアムネタ🔒 見た目はフルで確認OK。保存＆全部解放は¥100だよ✨`,'bot');
+}
 buyBtn.addEventListener('click', ()=>{ const url=(window.GUMROAD&&window.GUMROAD.productUrl)||''; if(url) window.open(url,'_blank','noopener'); else alert('現在準備中です🙏 まもなく購入できるようになります。'); });
+document.getElementById('upBtn').addEventListener('click', flashPaybox);
 async function verifyLicense(key){
   const permalink=(window.GUMROAD&&window.GUMROAD.permalink)||''; if(!permalink) return {ok:false,reason:'not_configured'};
   try{
@@ -872,7 +914,7 @@ async function verifyLicense(key){
 unlockBtn.addEventListener('click', async ()=>{
   const key=keyInput.value.trim(); if(!key){ alert('ライセンスキーを貼り付けてね'); return; }
   unlockBtn.textContent='確認中…'; const r=await verifyLicense(key); unlockBtn.textContent='解除';
-  if(r.ok){ state.premium=true; localStorage.setItem(LS_KEY,key); reflectPremium(); addMsg('透かしを解除しました！高画質でDLできるよ✨','bot'); }
+  if(r.ok){ state.premium=true; localStorage.setItem(LS_KEY,key); reflectPremium(); addMsg('全ネタ解放！🎉 高画質・なめらか・ロゴなしで保存できるよ✨','bot'); }
   else if(r.reason==='not_configured') alert('準備中です🙏（開発者へ: Gumroadのpermalinkを設定してください）');
   else alert('キーを確認できませんでした。コピー内容をもう一度チェックしてね。');
 });
