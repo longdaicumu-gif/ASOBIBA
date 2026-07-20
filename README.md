@@ -1,73 +1,33 @@
-# React + TypeScript + Vite
+# ASOBIBA 🛝
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+いろんなミニサービスを置いていく「遊び場（ASOBIBA）」リポジトリ。
 
-Currently, two official plugins are available:
+## 🧪 これは実験です
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+このリポジトリの中身は、**「案出しから、実装・公開・マネタイズ設計・広報まで、ぜんぶ AI（Claude Code）に任せたら何ができあがるか」** のお遊び実験です。
 
-## React Compiler
+筆者は **スマホからの指示（バイブコーディング）だけ** で、
+アイデア出し → 実装 → GitHub Pages への公開 → 課金の仕組み → 宣伝素材づくり
+までを Claude にやらせています。**人間はコードを1行も書いていません。** ゆるく見てください。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 中身
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### ✨ おいわいメーカー （今回の実験の主役）
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+名前を入れるだけで“無駄に凝った”**うごくお祝いGIF**が作れるツール。
+誕生日・記念日から、パチンコ大当り・製作費5兆円・SSR確定・レベルUP・賞状まで**全14種**。
+GIF生成もチャット編集もすべてブラウザ内で完結（サーバー不要・月額0円）。
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- 🔗 **公開中 → https://longdaicumu-gif.github.io/ASOBIBA/**
+- 📁 コード → [`apps/hbd/`](apps/hbd/)
+- 📣 広報素材 → [`apps/hbd/広報キット.md`](apps/hbd/広報キット.md)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+### 🎮 FF14 ギミック練習ツール（作りかけ）
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Phaser 製のレイドギミック練習ゲーム。AoE・ノックバック・頭割り・散開などを実装。`src/` 以下。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+---
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+> 全編、**スマホ × Claude Code** によるバイブコーディングで制作。
